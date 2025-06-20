@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Histórico de Verificações</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col items-center p-6">
+  <div class="w-full max-w-3xl bg-white rounded-xl shadow-md p-6">
+    <div class="flex justify-between items-center mb-6">
+      <h2 class="text-2xl font-bold">Histórico de Verificações</h2>
+      <button id="btnLogout" class="bg-red-600 text-white rounded px-4 py-2 hover:bg-red-700">
+        Logout
+      </button>
+    </div>
+
+    <div class="mb-4">
+      <a href="verificar.html" class="text-green-600 hover:underline">Nova verificação de plágio</a>
+    </div>
+
+    <div id="listaVerificacoes" class="space-y-4">
+      <!-- Verificações serão inseridas aqui -->
+    </div>
+
+    <p id="msgErro" class="text-red-600 mt-6"></p>
+  </div>
+
+  <script>
+    // Pegue o email do usuário que você guardou no localStorage no login
+    const email = localStorage.getItem('usuarioEmail');
+    const msgErro = document.getElementById('msgErro');
+    const lista = document.getElementById('listaVerificacoes');
+
+    if (!email) {
+      alert('Usuário não logado. Voltando para login.');
+      window.location.href = 'index.html';
+    }
+
+    async function carregarHistorico() {
+      msgErro.textContent = '';
+      try {
+        const res = await fetch(`http://localhost:5000/verificacoes?email=${encodeURIComponent(email)}`);
+        if (!res.ok) {
+          const data = await res.json();
+          msgErro.textContent = data.erro || 'Erro ao buscar histórico.';
+          return;
+        }
+        const verificacoes = await res.json();
+
+        if (verificacoes.length === 0) {
+          lista.innerHTML = '<p class="text-gray-700">Nenhuma verificação encontrada.</p>';
+          return;
+        }
+
+        lista.innerHTML = '';
+        verificacoes.forEach(v => {
+          const div = document.createElement('div');
+          div.className = 'border p-4 rounded shadow-sm bg-gray-50';
+
+          div.innerHTML = `
+            <p><strong>Texto 1:</strong> ${v.texto1}</p>
+            <p><strong>Texto 2:</strong> ${v.texto2}</p>
+            <p><strong>Similaridade:</strong> ${v.porcentagem.toFixed(2)}%</p>
+            <p><strong>Data:</strong> ${v.data}</p>
+          `;
+          lista.appendChild(div);
+        });
+      } catch (err) {
+        msgErro.textContent = 'Erro de conexão.';
+        console.error(err);
+      }
+    }
+
+    carregarHistorico();
+
+    // Logout
+    document.getElementById('btnLogout').addEventListener('click', () => {
+      localStorage.removeItem('usuarioEmail');
+      window.location.href = 'index.html';
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Cadastro</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+  <div class="bg-white p-8 rounded shadow-md w-full max-w-sm">
+    <h1 class="text-2xl font-bold mb-6">Cadastro</h1>
+
+    <form id="formCadastro" class="space-y-4">
+      <input type="text" id="nome" placeholder="Nome" class="w-full border p-2 rounded" required />
+      <input type="email" id="email" placeholder="Email" class="w-full border p-2 rounded" required />
+      <input type="password" id="senha" placeholder="Senha" class="w-full border p-2 rounded" required />
+      <button type="submit" class="w-full bg-green-600 text-white p-2 rounded hover:bg-green-700">Cadastrar</button>
+    </form>
+
+    <p class="mt-4 text-center">
+      Já tem conta? 
+      <a href="/" class="text-blue-600 hover:underline">Faça login aqui</a>
+
+    </p>
+
+    <p id="msgErro" class="mt-4 text-red-600"></p>
+    <p id="msgSucesso" class="mt-4 text-green-600"></p>
+  </div>
+
+  <script>
+    const msgErro = document.getElementById('msgErro');
+    const msgSucesso = document.getElementById('msgSucesso');
+
+    document.getElementById('formCadastro').addEventListener('submit', async e => {
+      e.preventDefault();
+      msgErro.textContent = '';
+      msgSucesso.textContent = '';
+
+      const nome = document.getElementById('nome').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const senha = document.getElementById('senha').value.trim();
+
+      try {
+        const res = await fetch('http://localhost:5000/usuarios', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nome, email, senha })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          msgErro.textContent = data.erro || 'Erro no cadastro.';
+          return;
+        }
+
+        msgSucesso.textContent = 'Cadastro realizado com sucesso! Você será redirecionado para login...';
+
+        setTimeout(() => window.location.href = 'index.html', 2500);
+
+      } catch (error) {
+        msgErro.textContent = 'Erro ao conectar com o servidor.';
+        console.error(error);
+      }
+    });
+  </script>
+</body>
+</html>

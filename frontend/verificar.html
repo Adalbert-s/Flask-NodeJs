@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Verificar Plágio</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col items-center p-6">
+  <div class="w-full max-w-3xl bg-white rounded-xl shadow-md p-6">
+    <div class="flex justify-between items-center mb-6">
+      <h2 class="text-2xl font-bold">Verificar Plágio</h2>
+      <button id="btnLogout" class="bg-red-600 text-white rounded px-4 py-2 hover:bg-red-700">
+        Logout
+      </button>
+    </div>
+
+    <form id="formVerificar" class="space-y-4">
+      <div>
+        <label for="texto1" class="block font-semibold mb-1">Texto produzido:</label>
+        <textarea id="texto1" rows="4" class="w-full border rounded p-2" required></textarea>
+      </div>
+
+      <div>
+        <label for="texto2" class="block font-semibold mb-1">Texto para comparação:</label>
+        <textarea id="texto2" rows="4" class="w-full border rounded p-2" required></textarea>
+      </div>
+
+      <button type="submit" class="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700">
+        Verificar
+      </button>
+    </form>
+
+    <div id="resultado" class="mt-6 p-4 bg-gray-50 rounded shadow hidden">
+      <h3 class="text-xl font-semibold mb-2">Resultado</h3>
+      <p id="percentual" class="text-lg"></p>
+      <p id="mensagem" class="font-semibold"></p>
+    </div>
+
+    <p id="msgErro" class="text-red-600 mt-6"></p>
+  </div>
+
+  <script>
+    const email = localStorage.getItem('usuarioEmail');
+    const resultadoDiv = document.getElementById('resultado');
+    const percentualP = document.getElementById('percentual');
+    const mensagemP = document.getElementById('mensagem');
+    const msgErro = document.getElementById('msgErro');
+
+    if (!email) {
+      alert('Usuário não logado. Voltando para login.');
+      window.location.href = 'index.html';
+    }
+
+    document.getElementById('formVerificar').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      msgErro.textContent = '';
+      resultadoDiv.classList.add('hidden');
+
+      const texto1 = document.getElementById('texto1').value.trim();
+      const texto2 = document.getElementById('texto2').value.trim();
+
+      if (!texto1 || !texto2) {
+        msgErro.textContent = 'Por favor, preencha ambos os textos.';
+        return;
+      }
+
+      try {
+        const res = await fetch('http://localhost:5000/verificacoes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, texto1, texto2 })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          msgErro.textContent = data.erro || 'Erro na verificação.';
+          return;
+        }
+
+        percentualP.textContent = `Similaridade: ${data.porcentagem_plagio.toFixed(2)}%`;
+        mensagemP.textContent = data.mensagem;
+        resultadoDiv.classList.remove('hidden');
+      } catch (err) {
+        msgErro.textContent = 'Erro de conexão.';
+        console.error(err);
+      }
+    });
+
+    // Logout
+    document.getElementById('btnLogout').addEventListener('click', () => {
+      localStorage.removeItem('usuarioEmail');
+      window.location.href = 'index.html';
+    });
+  </script>
+</body>
+</html>

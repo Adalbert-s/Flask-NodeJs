@@ -18,3 +18,10 @@ instance/
 
 # Arquivos de banco de dados SQLite
 *.db
+# Python
+backend-flask/__pycache__/
+backend-flask/instance/
+backend-flask/database.db
+
+# Node.js
+backend-nodejs/node_modules/
