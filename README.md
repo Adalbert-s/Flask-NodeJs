@@ -224,6 +224,7 @@ sequenceDiagram
   NodeJS->>Flask: Requisição HTTP REST (POST /login, POST /verificacoes, etc)
   Flask-->>NodeJS: Resposta JSON com resultados ou erros
   NodeJS->>Usuário: Exibe resultado no terminal
+
 ```
 
 ---
