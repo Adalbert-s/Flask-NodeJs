@@ -235,28 +235,6 @@ Este script implementa uma interface de linha de comando (CLI) que interage com 
 - **`axios`**: para fazer requisições HTTP ao backend.
 
 ---
-
-## Funcionamento Geral
-
-1. **Menu Principal**  
-   Apresenta opções para o usuário:  
-   - Fazer Login  
-   - Cadastrar Usuário  
-   - Sair  
-
-2. **Menu Logado**  
-   Após login bem-sucedido, apresenta opções:  
-   - Verificar Plágio  
-   - Logout  
-
-3. **Fluxo de Requisições**  
-   Cada opção selecionada no menu realiza uma chamada HTTP para o backend:  
-   - Login: POST `/login`  
-   - Cadastro: POST `/usuarios`  
-   - Verificação de Plágio: POST `/plagio`  
-
----
-
 ## Fluxo do Menu - Diagrama
 
 ```mermaid
@@ -278,6 +256,26 @@ stateDiagram-v2
     VerificarPlagio --> MenuLogado : Após verificação
 
 ```
+---
+
+## Funcionamento Geral
+
+1. **Menu Principal**  
+   Apresenta opções para o usuário:  
+   - Fazer Login  
+   - Cadastrar Usuário  
+   - Sair  
+
+2. **Menu Logado**  
+   Após login bem-sucedido, apresenta opções:  
+   - Verificar Plágio  
+   - Logout  
+
+3. **Fluxo de Requisições**  
+   Cada opção selecionada no menu realiza uma chamada HTTP para o backend:  
+   - Login: POST `/login`  
+   - Cadastro: POST `/usuarios`  
+   - Verificação de Plágio: POST `/plagio`  
 
 ---
 
