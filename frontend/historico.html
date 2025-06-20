@@ -9,14 +9,14 @@
   <div class="w-full max-w-3xl bg-white rounded-xl shadow-md p-6">
     <div class="flex justify-between items-center mb-6">
       <h2 class="text-2xl font-bold">Histórico de Verificações</h2>
-      <button id="btnLogout" class="bg-red-600 text-white rounded px-4 py-2 hover:bg-red-700">
-        Logout
-      </button>
-    </div>
-
-    <div class="mb-4">
-      <a href="/verificar" class="text-green-600 hover:underline">Nova verificação de plágio</a>
-
+      <div class="space-x-4">
+        <a href="/verificar" class="bg-green-600 text-white rounded px-4 py-2 hover:bg-green-700">
+          Nova verificação
+        </a>
+        <button id="btnLogout" class="bg-red-600 text-white rounded px-4 py-2 hover:bg-red-700">
+          Logout
+        </button>
+      </div>
     </div>
 
     <div id="listaVerificacoes" class="space-y-4">
@@ -27,7 +27,6 @@
   </div>
 
   <script>
-    // Pegue o email do usuário que você guardou no localStorage no login
     const email = localStorage.getItem('usuarioEmail');
     const msgErro = document.getElementById('msgErro');
     const lista = document.getElementById('listaVerificacoes');

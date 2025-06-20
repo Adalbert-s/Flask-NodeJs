@@ -9,9 +9,14 @@
   <div class="w-full max-w-3xl bg-white rounded-xl shadow-md p-6">
     <div class="flex justify-between items-center mb-6">
       <h2 class="text-2xl font-bold">Verificar Plágio</h2>
-      <button id="btnLogout" class="bg-red-600 text-white rounded px-4 py-2 hover:bg-red-700">
-        Logout
-      </button>
+      <div class="space-x-2 flex">
+        <button id="btnHistorico" class="bg-gray-600 text-white rounded px-4 py-2 hover:bg-gray-700">
+          Ver Histórico
+        </button>
+        <button id="btnLogout" class="bg-red-600 text-white rounded px-4 py-2 hover:bg-red-700">
+          Logout
+        </button>
+      </div>
     </div>
 
     <form id="formVerificar" class="space-y-4">
@@ -85,6 +90,11 @@
         msgErro.textContent = 'Erro de conexão.';
         console.error(err);
       }
+    });
+
+    // Botão Histórico
+    document.getElementById('btnHistorico').addEventListener('click', () => {
+      window.location.href = '/historico';  // Ajuste conforme a rota que criar no backend
     });
 
     // Logout
