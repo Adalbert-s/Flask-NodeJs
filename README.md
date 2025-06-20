@@ -1,4 +1,25 @@
-# Documentação da Comunicação entre Módulos do Sistema
+# Documentação do Requisito e Uso do Node.js na Aplicação
+
+## Requisito da Tarefa
+
+A tarefa exige o desenvolvimento de duas aplicações distintas:
+
+1. **Aplicação Flask (Python)**  
+   - Responsável por fornecer uma API RESTful.  
+   - Executa a lógica principal em Python, como autenticação, verificação de plágio e armazenamento dos dados no banco.  
+   - Expõe endpoints HTTP para receber requisições e retornar respostas em JSON.
+
+2. **Aplicação Node.js (JavaScript)**  
+   - Atua como cliente dessa API RESTful.  
+   - Faz requisições HTTP para o backend Flask para solicitar a execução de código Python (ex: verificação de plágio).  
+   - Processa e apresenta os resultados ao usuário (no caso atual, via terminal CLI).  
+
+3. **Comunicação via REST**  
+   - O Node.js e o Flask se comunicam exclusivamente por meio de requisições HTTP REST.  
+   - O Node.js não executa lógica Python diretamente, mas solicita ao Flask que execute e retorne resultados.
+
+---
+
 ## Visão Geral
 O sistema possui dois módulos principais que se comunicam via API RESTful:
 - Backend (Flask): API que gerencia autenticação, verificações de plágio, persistência de dados.
@@ -139,7 +160,31 @@ classDiagram
   }
   Usuario "1" -- "0..*" Verificacao : possui
 ```
+## Como o Node.js Está Funcionando na Aplicação
 
+- O Node.js funciona como uma **interface de linha de comando (CLI)** para o usuário.  
+- Ele possui menus para:  
+  - Fazer login no sistema (chamando `/login` no Flask).  
+  - Cadastrar novo usuário (chamando `/usuarios` no Flask).  
+  - Solicitar verificação de plágio (chamando `/verificacoes` no Flask).  
+- Cada ação do usuário no Node.js dispara uma requisição HTTP para a API Flask, que processa os dados e retorna respostas JSON.  
+- O Node.js interpreta essas respostas e exibe mensagens ou resultados para o usuário no terminal.  
+- A autenticação gera um token (simulado) para manter sessão no Node.js.
+- 
+---
+
+## Relação entre as Aplicações e Fluxo
+
+```mermaid
+sequenceDiagram
+  participant Usuário
+  participant NodeJS
+  participant Flask
+
+  Usuário->>NodeJS: Interage via CLI (login, cadastro, verificação)
+  NodeJS->>Flask: Requisição HTTP REST (POST /login, POST /verificacoes, etc)
+  Flask-->>NodeJS: Resposta JSON com resultados ou erros
+  NodeJS->>Usuário: Exibe resultado no terminal
 ## Considerações Técnicas
 - O backend usa CORS para permitir requisições do frontend.
 - A comunicação utiliza JSON para padronização.
