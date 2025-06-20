@@ -1,12 +1,15 @@
 from flask import Flask, render_template
 from models import db
 from routes import routes
+from flask_cors import CORS
+
 
 app = Flask(
     __name__, 
     static_folder='../frontend/static',   # onde ficam css, js, imagens
     template_folder='../frontend'         # onde fica index.html
 )
+CORS(app)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
