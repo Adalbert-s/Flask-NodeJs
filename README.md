@@ -227,6 +227,55 @@ sequenceDiagram
 
 ```
 
+# Explicação do Menu CLI em Node.js
+
+Este script implementa uma interface de linha de comando (CLI) que interage com uma API REST usando Node.js. Ele usa os módulos:
+
+- **`readline`**: para interação via terminal (entrada e saída).
+- **`axios`**: para fazer requisições HTTP ao backend.
+
+---
+
+## Funcionamento Geral
+
+1. **Menu Principal**  
+   Apresenta opções para o usuário:  
+   - Fazer Login  
+   - Cadastrar Usuário  
+   - Sair  
+
+2. **Menu Logado**  
+   Após login bem-sucedido, apresenta opções:  
+   - Verificar Plágio  
+   - Logout  
+
+3. **Fluxo de Requisições**  
+   Cada opção selecionada no menu realiza uma chamada HTTP para o backend:  
+   - Login: POST `/login`  
+   - Cadastro: POST `/usuarios`  
+   - Verificação de Plágio: POST `/plagio`  
+
+---
+
+## Fluxo do Menu - Diagrama
+
+```mermaid
+stateDiagram-v2
+    [*] --> MenuPrincipal
+
+    MenuPrincipal --> FazerLogin : Opção 1
+    MenuPrincipal --> CadastrarUsuario : Opção 2
+    MenuPrincipal --> [*] : Opção 0 (Sair)
+
+    FazerLogin --> MenuLogado : Login OK
+    FazerLogin --> MenuPrincipal : Login falhou
+
+    CadastrarUsuario --> MenuPrincipal : Cadastro finalizado
+
+    MenuLogado --> VerificarPlagio : Opção 1
+    MenuLogado --> MenuPrincipal : Logout (Opção 2)
+
+    VerificarPlagio --> MenuLogado : Após verificação
 ---
 
 ## Considerações Técnicas
