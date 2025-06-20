@@ -1,8 +1,10 @@
 from flask import Blueprint, request, jsonify
 from difflib import SequenceMatcher
 from models import db, Usuario, Verificacao
+
 routes = Blueprint('routes', __name__)
 
+# Rota para login
 @routes.route('/login', methods=['POST'])
 def login():
     dados = request.get_json()
@@ -15,79 +17,83 @@ def login():
 
     return jsonify({'mensagem': 'Login bem-sucedido', 'email': usuario.email}), 200
 
-@routes.route('/usuarios/<int:id>', methods=['GET'])
-def get_usuario(id):
-    usuario = Usuario.query.get(id)
-    if not usuario:
-        return {"erro": "Usuário não encontrado"}, 404
-    return {
-        "id": usuario.id,
-        "nome": usuario.nome,
-        "email": usuario.email,
-        "senha": usuario.senha  # cuidado em enviar senha, só faça isso em ambiente controlado
-    }
-
+# Rota para listar usuários
 @routes.route('/usuarios', methods=['GET'])
 def listar_usuarios():
     usuarios = Usuario.query.all()
     resultado = [{'id': u.id, 'nome': u.nome, 'email': u.email} for u in usuarios]
     return jsonify(resultado)
 
-# Outras rotas de usuário e verificações...
+# Rota para criar usuário (POST)
+@routes.route('/usuarios', methods=['POST'])
+def criar_usuario():
+    dados = request.get_json()
+    nome = dados.get('nome')
+    email = dados.get('email')
+    senha = dados.get('senha')
 
-@routes.route('/verificacoes', methods=['GET', 'POST'])
-def verificacoes():
-    if request.method == 'POST':
-        dados = request.get_json()
-        email = dados.get('email')
-        texto1 = dados.get('texto1')
-        texto2 = dados.get('texto2')
+    if not nome or not email or not senha:
+        return jsonify({'erro': 'Todos os campos são obrigatórios'}), 400
 
-        if not texto1 or not texto2:
-            return jsonify({'erro': 'Ambos os textos são obrigatórios'}), 400
+    if Usuario.query.filter_by(email=email).first():
+        return jsonify({'erro': 'Email já cadastrado'}), 409
 
-        similaridade = SequenceMatcher(None, texto1, texto2).ratio()
-        porcentagem = round(similaridade * 100, 2)
+    novo_usuario = Usuario(nome=nome, email=email, senha=senha)
+    db.session.add(novo_usuario)
+    db.session.commit()
 
-        # Salvar no banco
-        usuario = Usuario.query.filter_by(email=email).first()
-        if not usuario:
-            return jsonify({'erro': 'Usuário não encontrado'}), 404
+    return jsonify({'mensagem': 'Usuário criado com sucesso'}), 201
 
-        nova_verificacao = Verificacao(
-            texto1=texto1,
-            texto2=texto2,
-            porcentagem=porcentagem,
-            usuario_id=usuario.id
-        )
-        db.session.add(nova_verificacao)
-        db.session.commit()
+# Rota para verificação de plágio (POST)
+@routes.route('/verificacoes', methods=['POST'])
+def verificar_plagio():
+    dados = request.get_json()
+    texto1 = dados.get('texto1')
+    texto2 = dados.get('texto2')
+    email = dados.get('email')
 
-        return jsonify({
-            'porcentagem_plagio': porcentagem,
-            'mensagem': 'Verificação concluída.'
-        }), 200
+    if not texto1 or not texto2 or not email:
+        return jsonify({'erro': 'Campos texto1, texto2 e email são obrigatórios'}), 400
 
-    else:  # GET
-        email = request.args.get('email')
-        if not email:
-            return jsonify({'erro': 'Email é obrigatório para buscar histórico'}), 400
+    usuario = Usuario.query.filter_by(email=email).first()
+    if not usuario:
+        return jsonify({'erro': 'Usuário não encontrado'}), 404
 
-        usuario = Usuario.query.filter_by(email=email).first()
-        if not usuario:
-            return jsonify({'erro': 'Usuário não encontrado'}), 404
+    similaridade = SequenceMatcher(None, texto1, texto2).ratio()
+    porcentagem = round(similaridade * 100, 2)
 
-        verificacoes = Verificacao.query.filter_by(usuario_id=usuario.id).all()
+    # Salvar a verificação no banco
+    verificacao = Verificacao(
+        texto1=texto1,
+        texto2=texto2,
+        porcentagem=porcentagem,
+        usuario=usuario
+    )
+    db.session.add(verificacao)
+    db.session.commit()
 
-        resultado = []
-        for v in verificacoes:
-            resultado.append({
-                'texto1': v.texto1,
-                'texto2': v.texto2,
-                'porcentagem': v.porcentagem,
-                'data': v.data.strftime('%d/%m/%Y %H:%M:%S')
-            })
+    return jsonify({
+        'porcentagem_plagio': porcentagem,
+        'mensagem': 'Verificação concluída.'
+    }), 200
 
-        return jsonify(resultado)
+# Rota para consultar histórico de verificações por email (GET)
+@routes.route('/verificacoes', methods=['GET'])
+def listar_verificacoes():
+    email = request.args.get('email')
+    if not email:
+        return jsonify({'erro': 'Parâmetro email é obrigatório'}), 400
 
+    usuario = Usuario.query.filter_by(email=email).first()
+    if not usuario:
+        return jsonify({'erro': 'Usuário não encontrado'}), 404
 
+    verificacoes = Verificacao.query.filter_by(usuario_id=usuario.id).all()
+    resultado = [{
+        'texto1': v.texto1,
+        'texto2': v.texto2,
+        'porcentagem': v.porcentagem,
+        'data': v.data.isoformat()
+    } for v in verificacoes]
+
+    return jsonify(resultado)
