@@ -113,6 +113,3 @@ Para mais detalhes sobre a implementação e comunicação entre módulos, consu
 
 Qualquer dúvida ou sugestão, entre em contato.
 
----
-
-**Boa sorte no projeto!**
