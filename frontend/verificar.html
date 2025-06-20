@@ -53,7 +53,7 @@
 
     if (!email) {
       alert('Usuário não logado. Voltando para login.');
-      window.location.href = 'index.html';
+      window.location.href = '/';
     }
 
     document.getElementById('formVerificar').addEventListener('submit', async (e) => {
@@ -100,7 +100,7 @@
     // Logout
     document.getElementById('btnLogout').addEventListener('click', () => {
       localStorage.removeItem('usuarioEmail');
-      window.location.href = 'index.html';
+      window.location.href = '/';
     });
   </script>
 </body>
