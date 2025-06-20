@@ -1,4 +1,13 @@
-# Documentação do Requisito e Uso do Node.js na Aplicação
+
+# Documentação do Projeto: Comunicação entre Aplicações Flask e Node.js
+
+---
+
+## Resumo do Projeto
+
+Este projeto consiste em duas aplicações separadas: uma backend em Flask que expõe uma API RESTful para executar funções em Python (como verificação de plágio) e uma aplicação cliente em Node.js que consome essa API via chamadas HTTP. O Node.js não executa código Python diretamente, apenas solicita que o Flask execute e retorne os resultados. A comunicação entre elas é feita exclusivamente por REST, com dados trocados em JSON. A documentação detalha essa comunicação e as funcionalidades de cada módulo.
+
+---
 
 ## Requisito da Tarefa
 
@@ -12,7 +21,7 @@ A tarefa exige o desenvolvimento de duas aplicações distintas:
 2. **Aplicação Node.js (JavaScript)**  
    - Atua como cliente dessa API RESTful.  
    - Faz requisições HTTP para o backend Flask para solicitar a execução de código Python (ex: verificação de plágio).  
-   - Processa e apresenta os resultados ao usuário (no caso atual, via terminal CLI).  
+   - Processa e apresenta os resultados ao usuário (no caso atual, via terminal CLI).
 
 3. **Comunicação via REST**  
    - O Node.js e o Flask se comunicam exclusivamente por meio de requisições HTTP REST.  
@@ -21,30 +30,39 @@ A tarefa exige o desenvolvimento de duas aplicações distintas:
 ---
 
 ## Visão Geral
+
 O sistema possui dois módulos principais que se comunicam via API RESTful:
-- Backend (Flask): API que gerencia autenticação, verificações de plágio, persistência de dados.
-- Frontend (HTML, JavaScript, TailwindCSS): interface para o usuário interagir, enviar dados e visualizar resultados.
+
+- **Backend (Flask):** API que gerencia autenticação, verificações de plágio, persistência de dados.  
+- **Frontend (HTML, JavaScript, TailwindCSS):** interface para o usuário interagir, enviar dados e visualizar resultados.
+
 A comunicação é feita por requisições HTTP, com dados enviados e recebidos em JSON.
 
+---
+
 ## Módulos e Responsabilidades
+
 ### Backend
 - Oferece endpoints REST:
-  - POST /login
-  - POST /verificacoes
-  - GET /verificacoes?email=...
-  - GET /verificar e GET /historico para páginas HTML
+  - `POST /login`
+  - `POST /verificacoes`
+  - `GET /verificacoes?email=...`
+  - `GET /verificar` e `GET /historico` para páginas HTML
 - Armazena dados no banco SQLite via SQLAlchemy.
 - Valida entrada e retorna respostas HTTP apropriadas.
 
 ### Frontend
 - Páginas:
-  - index.html (Login)
-  - verificar.html (Formulário de verificação)
-  - historico.html (Lista de verificações)
-- Usa fetch() para consumir API backend.
-- Mantém o email do usuário em localStorage para sessão simples.
+  - `index.html` (Login)
+  - `verificar.html` (Formulário de verificação)
+  - `historico.html` (Lista de verificações)
+- Usa `fetch()` para consumir API backend.
+- Mantém o email do usuário em `localStorage` para sessão simples.
+
+---
 
 ## Fluxos de Comunicação
+
 ### 1. Login
 
 ```mermaid
@@ -55,32 +73,36 @@ sequenceDiagram
   Frontend->>LocalStorage: Salva email
   Frontend->>User: Redireciona para /verificar
 ```
-Exemplo requisição:
-```
+**Exemplo requisição:**
+```http
 POST /login
 Content-Type: application/json
+
 {
   "email": "teste@example.com",
   "senha": "123456"
 }
 ```
-Resposta sucesso:
-```
+**Resposta sucesso:**
+```http
 HTTP/1.1 200 OK
 {
   "mensagem": "Login bem-sucedido",
   "email": "teste@example.com"
 }
 ```
-Resposta erro:
-```
+**Resposta erro:**
+```http
 HTTP/1.1 401 Unauthorized
 {
   "erro": "Email ou senha inválidos"
 }
 ```
 
+---
+
 ### 2. Verificação de Plágio
+
 ```mermaid
 sequenceDiagram
   User->>Frontend: Insere dois textos
@@ -88,18 +110,19 @@ sequenceDiagram
   Backend-->>Frontend: 200 OK {porcentagem_plagio, mensagem}
   Frontend->>User: Exibe resultado
 ```
-Exemplo requisição:
-```
+**Exemplo requisição:**
+```http
 POST /verificacoes
 Content-Type: application/json
+
 {
   "email": "teste@example.com",
   "texto1": "Texto produzido pelo usuário.",
   "texto2": "Texto para comparação."
 }
 ```
-Resposta:
-```
+**Resposta:**
+```http
 HTTP/1.1 200 OK
 {
   "porcentagem_plagio": 75.34,
@@ -107,7 +130,10 @@ HTTP/1.1 200 OK
 }
 ```
 
+---
+
 ### 3. Consulta ao Histórico de Verificações
+
 ```mermaid
 sequenceDiagram
   User->>Frontend: Abre página histórico
@@ -115,13 +141,12 @@ sequenceDiagram
   Backend-->>Frontend: 200 OK [lista de verificações]
   Frontend->>User: Renderiza histórico na tela
 ```
-Exemplo requisição: 
-```
+**Exemplo requisição:** 
+```http
 GET /verificacoes?email=teste@example.com
 ```
-Resposta:
-```
-HTTP/1.1 200 OK
+**Resposta:**
+```json
 [
   {
     "texto1": "Texto A",
@@ -138,10 +163,16 @@ HTTP/1.1 200 OK
 ]
 ```
 
+---
+
 ### 4. Logout
-Frontend limpa localStorage e redireciona para a página de login.
+
+- Frontend limpa `localStorage` e redireciona para a página de login.
+
+---
 
 ## Modelo de Dados (Resumo)
+
 ```mermaid
 classDiagram
   class Usuario {
@@ -161,17 +192,24 @@ classDiagram
   }
   Usuario "1" -- "0..*" Verificacao : possui
 ```
+
+---
+
 ## Como o Node.js Está Funcionando na Aplicação
 
 - O Node.js funciona como uma **interface de linha de comando (CLI)** para o usuário.  
-- Ele possui menus para:  
-  - Fazer login no sistema (chamando `/login` no Flask).  
-  - Cadastrar novo usuário (chamando `/usuarios` no Flask).  
-  - Solicitar verificação de plágio (chamando `/verificacoes` no Flask).  
-- Cada ação do usuário no Node.js dispara uma requisição HTTP para a API Flask, que processa os dados e retorna respostas JSON.  
-- O Node.js interpreta essas respostas e exibe mensagens ou resultados para o usuário no terminal.  
-- A autenticação gera um token (simulado) para manter sessão no Node.js.
-- 
+- Possui menus para:  
+  - Fazer login no sistema (`/login` no Flask).  
+  - Cadastrar novo usuário (`/usuarios` no Flask).  
+  - Solicitar verificação de plágio (`/verificacoes` no Flask).  
+- Cada ação dispara uma requisição HTTP para a API Flask, que processa e retorna respostas JSON.  
+- O Node.js interpreta essas respostas e exibe mensagens no terminal.  
+- A autenticação gera um token (simulado) para manter sessão no Node.js.  
+- **Para iniciar o Node.js, execute no terminal:**  
+  ```
+  node app.js
+  ```
+
 ---
 
 ## Relação entre as Aplicações e Fluxo
@@ -186,9 +224,14 @@ sequenceDiagram
   NodeJS->>Flask: Requisição HTTP REST (POST /login, POST /verificacoes, etc)
   Flask-->>NodeJS: Resposta JSON com resultados ou erros
   NodeJS->>Usuário: Exibe resultado no terminal
+```
+
+---
+
 ## Considerações Técnicas
-- O backend usa CORS para permitir requisições do frontend.
-- A comunicação utiliza JSON para padronização.
-- As rotas retornam códigos HTTP corretos para facilitar tratamento no frontend.
-- O frontend usa armazenamento local para sessão simples.
+
+- O backend usa CORS para permitir requisições do frontend.  
+- A comunicação utiliza JSON para padronização.  
+- As rotas retornam códigos HTTP corretos para facilitar tratamento no frontend.  
+- O frontend usa armazenamento local para sessão simples.  
 - O backend utiliza Flask com SQLAlchemy e SQLite para persistência.
