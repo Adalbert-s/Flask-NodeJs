@@ -3,6 +3,8 @@ from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
 import jwt
+from functools import wraps
+from difflib import SequenceMatcher
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
@@ -29,6 +31,35 @@ class Verificacao(db.Model):
 
 with app.app_context():
     db.create_all()
+
+# --------------------------
+# DECORADOR DE TOKEN JWT
+# --------------------------
+def token_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = None
+        if 'Authorization' in request.headers:
+            bearer = request.headers['Authorization']
+            token = bearer.replace('Bearer ', '')
+
+        if not token:
+            return jsonify({'erro': 'Token é obrigatório'}), 401
+
+        try:
+            dados = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
+            current_user = Usuario.query.get(dados['usuario_id'])
+            if not current_user:
+                raise
+        except:
+            return jsonify({'erro': 'Token inválido ou expirado'}), 401
+
+        return f(current_user, *args, **kwargs)
+    return decorated
+
+# --------------------------
+# ROTAS
+# --------------------------
 
 # Criar usuário com hash de senha
 @app.route('/usuarios', methods=['POST'])
@@ -57,32 +88,7 @@ def login():
 
     return jsonify({'token': token, 'mensagem': 'Login realizado com sucesso'})
 
-# Decorador para proteger rotas
-from functools import wraps
-
-def token_required(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        token = None
-        if 'Authorization' in request.headers:
-            bearer = request.headers['Authorization']
-            token = bearer.replace('Bearer ', '')
-
-        if not token:
-            return jsonify({'erro': 'Token é obrigatório'}), 401
-
-        try:
-            dados = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
-            current_user = Usuario.query.get(dados['usuario_id'])
-            if not current_user:
-                raise
-        except:
-            return jsonify({'erro': 'Token inválido ou expirado'}), 401
-
-        return f(current_user, *args, **kwargs)
-    return decorated
-
-# Exemplo de rota protegida para criar verificação
+# Criar verificação de plágio (rota protegida)
 @app.route('/verificacoes', methods=['POST'])
 @token_required
 def criar_verificacao(current_user):
@@ -92,7 +98,6 @@ def criar_verificacao(current_user):
     if not texto1 or not texto2:
         return jsonify({'erro': 'Campos obrigatórios ausentes'}), 400
 
-    from difflib import SequenceMatcher
     palavras1 = texto1.lower().split()
     palavras2 = texto2.lower().split()
     porcentagem = SequenceMatcher(None, palavras1, palavras2).ratio() * 100
@@ -107,7 +112,21 @@ def criar_verificacao(current_user):
         'mensagem': 'Plágio detectado' if porcentagem > 70 else 'Sem plágio aparente'
     }), 201
 
-# Outros endpoints protegidos devem usar @token_required similarmente
+@app.route('/usuarios', methods=['DELETE'])
+@token_required
+def deletar_usuario(current_user):
+    db.session.delete(current_user)
+    db.session.commit()
+    return jsonify({'mensagem': 'Usuário deletado com sucesso'}), 200
+
+@app.route('/usuarios', methods=['GET'])
+def listar_usuarios():
+    usuarios = Usuario.query.all()
+    resultado = [{'id': u.id, 'nome': u.nome, 'email': u.email} for u in usuarios]
+    return jsonify(resultado), 200
+
+
+# Você pode continuar adicionando outras rotas protegidas usando @token_required
 
 if __name__ == '__main__':
     app.run(debug=True)
