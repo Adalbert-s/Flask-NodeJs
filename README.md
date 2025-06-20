@@ -46,6 +46,7 @@ A comunicação é feita por requisições HTTP, com dados enviados e recebidos 
 
 ## Fluxos de Comunicação
 ### 1. Login
+
 ```mermaid
 sequenceDiagram
   User->>Frontend: Entra email e senha
