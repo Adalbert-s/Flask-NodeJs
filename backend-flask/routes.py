@@ -35,3 +35,20 @@ def listar_usuarios():
 
 # Outras rotas de usuário e verificações...
 
+@routes.route('/verificacoes', methods=['POST'])
+def verificar_plagio():
+    dados = request.get_json()
+    texto1 = dados.get('texto1')
+    texto2 = dados.get('texto2')
+
+    if not texto1 or not texto2:
+        return jsonify({'erro': 'Ambos os textos são obrigatórios'}), 400
+
+    similaridade = SequenceMatcher(None, texto1, texto2).ratio()
+    porcentagem = round(similaridade * 100, 2)
+
+    return jsonify({
+        'porcentagem_plagio': porcentagem,
+        'mensagem': 'Verificação concluída.'
+    }), 200
+
