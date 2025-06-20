@@ -276,7 +276,11 @@ stateDiagram-v2
     MenuLogado --> MenuPrincipal : Logout (Opção 2)
 
     VerificarPlagio --> MenuLogado : Após verificação
+
+```
+
 ---
+
 
 ## Considerações Técnicas
 
