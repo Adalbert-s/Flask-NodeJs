@@ -6,7 +6,7 @@ const rl = readline.createInterface({
   output: process.stdout
 });
 
-let token = null;
+let usuarioLogado = null; // Agora armazenamos o email do usuário logado
 
 function perguntar(pergunta) {
   return new Promise(resolve => rl.question(pergunta, resolve));
@@ -35,7 +35,7 @@ async function menuPrincipal() {
       console.log('Opção inválida!');
   }
 
-  if (token) {
+  if (usuarioLogado) {
     await menuLogado();
   } else {
     await menuPrincipal();
@@ -43,9 +43,10 @@ async function menuPrincipal() {
 }
 
 async function menuLogado() {
-  console.log('\n--- MENU LOGADO ---');
+  console.log(`\n--- MENU LOGADO (${usuarioLogado}) ---`);
   console.log('1 - Verificar Plágio');
-  console.log('2 - Logout');
+  console.log('2 - Ver Histórico');
+  console.log('3 - Logout');
 
   const opcao = await perguntar('Escolha uma opção: ');
 
@@ -54,9 +55,12 @@ async function menuLogado() {
       await verificarPlagio();
       break;
     case '2':
-      token = null;
+      await verHistorico();
+      break;
+    case '3':
+      usuarioLogado = null;
       console.log('Logout realizado.');
-      return;
+      return await menuPrincipal();
     default:
       console.log('Opção inválida!');
   }
@@ -70,7 +74,7 @@ async function fazerLogin() {
 
   try {
     const resposta = await axios.post('http://localhost:5000/login', { email, senha });
-    token = resposta.data.token;
+    usuarioLogado = resposta.data.email;
     console.log(resposta.data.mensagem);
   } catch (erro) {
     console.error('Erro no login:', erro.response?.data?.erro || erro.message);
@@ -91,18 +95,20 @@ async function cadastrarUsuario() {
 }
 
 async function verificarPlagio() {
-  if (!token) {
+  if (!usuarioLogado) {
     console.log('Você precisa estar logado para verificar plágio.');
     return;
   }
+
   const texto1 = await perguntar('Texto produzido: ');
   const texto2 = await perguntar('Texto para comparar: ');
 
   try {
-    const resposta = await axios.post('http://localhost:5000/verificacoes', 
-      { texto1, texto2 }, 
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
+    const resposta = await axios.post('http://localhost:5000/verificacoes', {
+      email: usuarioLogado,
+      texto1,
+      texto2
+    });
 
     console.log('\n--- Resultado ---');
     console.log(`Similaridade: ${resposta.data.porcentagem_plagio}%`);
@@ -112,4 +118,34 @@ async function verificarPlagio() {
   }
 }
 
+async function verHistorico() {
+  if (!usuarioLogado) {
+    console.log('Você precisa estar logado para ver o histórico.');
+    return;
+  }
+
+  try {
+    const resposta = await axios.get(`http://localhost:5000/verificacoes?email=${encodeURIComponent(usuarioLogado)}`);
+    const lista = resposta.data;
+
+    if (lista.length === 0) {
+      console.log('Nenhuma verificação encontrada.');
+      return;
+    }
+
+    console.log('\n--- Histórico de Verificações ---');
+    lista.forEach((v, i) => {
+      console.log(`\nVerificação ${i + 1}:`);
+      console.log(`Texto 1: ${v.texto1}`);
+      console.log(`Texto 2: ${v.texto2}`);
+      console.log(`Similaridade: ${v.porcentagem}%`);
+      console.log(`Data: ${v.data}`);
+    });
+
+  } catch (erro) {
+    console.error('Erro ao buscar histórico:', erro.response?.data?.erro || erro.message);
+  }
+}
+
+// Iniciar o sistema
 menuPrincipal();
