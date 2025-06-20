@@ -25,6 +25,11 @@ def index():
 def cadastro():
     return render_template('cadastro.html')
 
+@app.route('/verificar')
+def verificar():
+    return render_template('verificar.html')
+
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()

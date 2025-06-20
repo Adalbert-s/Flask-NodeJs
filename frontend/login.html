@@ -21,4 +21,51 @@
       </div>
 
       <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded">Entrar</button>
-    </fo
+    </form>
+
+    <p class="mt-4 text-center">
+      Não tem conta? 
+      <a href="/cadastro" class="text-blue-600 hover:underline">Cadastre-se aqui</a>
+    </p>
+
+    <p id="msgErro" class="mt-4 text-red-600 text-center"></p>
+  </div>
+
+  <script>
+    const msgErro = document.getElementById('msgErro');
+
+    document.getElementById('loginForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      msgErro.textContent = '';
+
+      const email = document.getElementById('email').value.trim();
+      const senha = document.getElementById('senha').value.trim();
+
+      try {
+        const res = await fetch('http://localhost:5000/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, senha })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          msgErro.textContent = data.erro || 'Erro no login.';
+          return;
+        }
+
+        // Armazena o email para usar na sessão (exemplo simples)
+        localStorage.setItem('usuarioEmail', email);
+
+        // Redireciona para a rota /verificar, que seu Flask já serve corretamente
+        window.location.href = '/verificar';
+
+      } catch (error) {
+        msgErro.textContent = 'Erro ao conectar com o servidor.';
+        console.error(error);
+      }
+    });
+  </script>
+</body>
+</html>

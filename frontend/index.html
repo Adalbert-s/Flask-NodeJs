@@ -24,48 +24,40 @@
     <p id="msgErro" class="mt-4 text-red-600"></p>
   </div>
 
-  <script>
-    const msgErro = document.getElementById('msgErro');
+<script>
+  const msgErro = document.getElementById('msgErro');
 
-    document.getElementById('formLogin').addEventListener('submit', async e => {
-      e.preventDefault();
-      msgErro.textContent = '';
+  document.getElementById('formLogin').addEventListener('submit', async e => {
+    e.preventDefault();
+    msgErro.textContent = '';
 
-      const email = document.getElementById('email').value.trim();
-      const senha = document.getElementById('senha').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const senha = document.getElementById('senha').value.trim();
 
-      try {
-        const res = await fetch('http://localhost:5000/usuarios');
-        const usuarios = await res.json();
+    try {
+      const res = await fetch('http://localhost:5000/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, senha })
+      });
 
-        const usuario = usuarios.find(u => u.email === email);
+      const data = await res.json();
 
-        if (!usuario) {
-          msgErro.textContent = 'Usuário não encontrado.';
-          return;
-        }
-
-        // Aqui tenta buscar detalhes do usuário para verificar senha (o ideal é backend validar via login)
-        const resDetalhe = await fetch(`http://localhost:5000/usuarios/${usuario.id}`);
-        const dadosUsuario = await resDetalhe.json();
-
-        if (dadosUsuario.senha !== senha) {
-          msgErro.textContent = 'Senha incorreta.';
-          return;
-        }
-
-        // Salva o email no localStorage para sessões simples
-        localStorage.setItem('usuarioEmail', email);
-
-        // Redireciona para verificar plágio
-        window.location.href = 'verificar.html';
-
-      } catch (error) {
-        msgErro.textContent = 'Erro ao conectar com o servidor.';
-        console.error(error);
+      if (!res.ok) {
+        msgErro.textContent = data.erro || 'Erro no login.';
+        return;
       }
-    });
-  </script>
+
+      localStorage.setItem('usuarioEmail', email);
+      window.location.href = '/verificar';
+
+    } catch (error) {
+      msgErro.textContent = 'Erro ao conectar com o servidor.';
+      console.error(error);
+    }
+  });
+</script>
+
   <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
 </html>
