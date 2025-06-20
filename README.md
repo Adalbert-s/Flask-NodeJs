@@ -115,7 +115,7 @@ sequenceDiagram
   Backend-->>Frontend: 200 OK [lista de verificações]
   Frontend->>User: Renderiza histórico na tela
 ```
-Exemplo requisição:
+Exemplo requisição: 
 ```
 GET /verificacoes?email=teste@example.com
 ```
