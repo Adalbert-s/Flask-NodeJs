@@ -1,11 +1,13 @@
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
-from difflib import SequenceMatcher
-from datetime import datetime
+from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import datetime, timedelta
+import jwt
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SECRET_KEY'] = 'sua_chave_secreta_aqui'  # importante manter segredo
 
 db = SQLAlchemy(app)
 
@@ -14,7 +16,7 @@ class Usuario(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     nome = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    senha = db.Column(db.String(100), nullable=False)
+    senha_hash = db.Column(db.String(128), nullable=False)
     verificacoes = db.relationship('Verificacao', backref='usuario', lazy=True, cascade="all, delete")
 
 class Verificacao(db.Model):
@@ -28,78 +30,74 @@ class Verificacao(db.Model):
 with app.app_context():
     db.create_all()
 
-# --- CRUD USUÁRIO ---
-
-# Criar usuário
+# Criar usuário com hash de senha
 @app.route('/usuarios', methods=['POST'])
 def criar_usuario():
     dados = request.get_json()
     if Usuario.query.filter_by(email=dados.get('email')).first():
         return jsonify({'erro': 'Email já cadastrado'}), 400
-    usuario = Usuario(nome=dados['nome'], email=dados['email'], senha=dados['senha'])
+    senha_hash = generate_password_hash(dados['senha'])
+    usuario = Usuario(nome=dados['nome'], email=dados['email'], senha_hash=senha_hash)
     db.session.add(usuario)
     db.session.commit()
     return jsonify({'mensagem': 'Usuário criado', 'id': usuario.id}), 201
 
-# Ler todos usuários
-@app.route('/usuarios', methods=['GET'])
-def listar_usuarios():
-    usuarios = Usuario.query.all()
-    resultado = [{'id': u.id, 'nome': u.nome, 'email': u.email} for u in usuarios]
-    return jsonify(resultado), 200
-
-# Ler usuário específico
-@app.route('/usuarios/<int:id>', methods=['GET'])
-def buscar_usuario(id):
-    u = Usuario.query.get(id)
-    if not u:
-        return jsonify({'erro': 'Usuário não encontrado'}), 404
-    return jsonify({'id': u.id, 'nome': u.nome, 'email': u.email}), 200
-
-# Atualizar usuário
-@app.route('/usuarios/<int:id>', methods=['PUT'])
-def atualizar_usuario(id):
-    u = Usuario.query.get(id)
-    if not u:
-        return jsonify({'erro': 'Usuário não encontrado'}), 404
+# Login - retorna JWT se sucesso
+@app.route('/login', methods=['POST'])
+def login():
     dados = request.get_json()
-    u.nome = dados.get('nome', u.nome)
-    u.email = dados.get('email', u.email)
-    u.senha = dados.get('senha', u.senha)
-    db.session.commit()
-    return jsonify({'mensagem': 'Usuário atualizado'}), 200
+    usuario = Usuario.query.filter_by(email=dados.get('email')).first()
+    if not usuario or not check_password_hash(usuario.senha_hash, dados.get('senha')):
+        return jsonify({'erro': 'Email ou senha incorretos'}), 401
 
-# Deletar usuário
-@app.route('/usuarios/<int:id>', methods=['DELETE'])
-def deletar_usuario(id):
-    u = Usuario.query.get(id)
-    if not u:
-        return jsonify({'erro': 'Usuário não encontrado'}), 404
-    db.session.delete(u)
-    db.session.commit()
-    return jsonify({'mensagem': 'Usuário deletado'}), 200
+    token = jwt.encode({
+        'usuario_id': usuario.id,
+        'exp': datetime.utcnow() + timedelta(hours=2)
+    }, app.config['SECRET_KEY'], algorithm='HS256')
 
-# --- CRUD VERIFICAÇÕES (Histórico) ---
+    return jsonify({'token': token, 'mensagem': 'Login realizado com sucesso'})
 
-# Criar verificação (plágio)
+# Decorador para proteger rotas
+from functools import wraps
+
+def token_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = None
+        if 'Authorization' in request.headers:
+            bearer = request.headers['Authorization']
+            token = bearer.replace('Bearer ', '')
+
+        if not token:
+            return jsonify({'erro': 'Token é obrigatório'}), 401
+
+        try:
+            dados = jwt.decode(token, app.config['SECRET_KEY'], algorithms=['HS256'])
+            current_user = Usuario.query.get(dados['usuario_id'])
+            if not current_user:
+                raise
+        except:
+            return jsonify({'erro': 'Token inválido ou expirado'}), 401
+
+        return f(current_user, *args, **kwargs)
+    return decorated
+
+# Exemplo de rota protegida para criar verificação
 @app.route('/verificacoes', methods=['POST'])
-def criar_verificacao():
+@token_required
+def criar_verificacao(current_user):
     dados = request.get_json()
-    email = dados.get('email')
     texto1 = dados.get('texto1')
     texto2 = dados.get('texto2')
-    if not email or not texto1 or not texto2:
+    if not texto1 or not texto2:
         return jsonify({'erro': 'Campos obrigatórios ausentes'}), 400
 
-    usuario = Usuario.query.filter_by(email=email).first()
-    if not usuario:
-        return jsonify({'erro': 'Usuário não encontrado'}), 404
-
+    from difflib import SequenceMatcher
     palavras1 = texto1.lower().split()
     palavras2 = texto2.lower().split()
     porcentagem = SequenceMatcher(None, palavras1, palavras2).ratio() * 100
 
-    verificacao = Verificacao(texto1=texto1, texto2=texto2, porcentagem=porcentagem, usuario=usuario)
+    verificacao = Verificacao(texto1=texto1, texto2=texto2, porcentagem=porcentagem, usuario=current_user)
     db.session.add(verificacao)
     db.session.commit()
 
@@ -109,75 +107,7 @@ def criar_verificacao():
         'mensagem': 'Plágio detectado' if porcentagem > 70 else 'Sem plágio aparente'
     }), 201
 
-# Listar verificações de um usuário
-@app.route('/verificacoes', methods=['GET'])
-def listar_verificacoes():
-    email = request.args.get('email')
-    if not email:
-        return jsonify({'erro': 'Parâmetro email é obrigatório'}), 400
-    usuario = Usuario.query.filter_by(email=email).first()
-    if not usuario:
-        return jsonify({'erro': 'Usuário não encontrado'}), 404
-
-    verificacoes = Verificacao.query.filter_by(usuario_id=usuario.id).order_by(Verificacao.data.desc()).all()
-    resultado = []
-    for v in verificacoes:
-        resultado.append({
-            'id': v.id,
-            'texto1': v.texto1,
-            'texto2': v.texto2,
-            'porcentagem': round(v.porcentagem, 2),
-            'data': v.data.strftime('%Y-%m-%d %H:%M:%S')
-        })
-    return jsonify(resultado), 200
-
-# Buscar verificação específica
-@app.route('/verificacoes/<int:id>', methods=['GET'])
-def buscar_verificacao(id):
-    v = Verificacao.query.get(id)
-    if not v:
-        return jsonify({'erro': 'Verificação não encontrada'}), 404
-    return jsonify({
-        'id': v.id,
-        'texto1': v.texto1,
-        'texto2': v.texto2,
-        'porcentagem': round(v.porcentagem, 2),
-        'data': v.data.strftime('%Y-%m-%d %H:%M:%S'),
-        'usuario_id': v.usuario_id
-    }), 200
-
-# Atualizar verificação
-@app.route('/verificacoes/<int:id>', methods=['PUT'])
-def atualizar_verificacao(id):
-    v = Verificacao.query.get(id)
-    if not v:
-        return jsonify({'erro': 'Verificação não encontrada'}), 404
-
-    dados = request.get_json()
-    texto1 = dados.get('texto1', v.texto1)
-    texto2 = dados.get('texto2', v.texto2)
-
-    palavras1 = texto1.lower().split()
-    palavras2 = texto2.lower().split()
-    porcentagem = SequenceMatcher(None, palavras1, palavras2).ratio() * 100
-
-    v.texto1 = texto1
-    v.texto2 = texto2
-    v.porcentagem = porcentagem
-    db.session.commit()
-
-    return jsonify({'mensagem': 'Verificação atualizada'}), 200
-
-# Deletar verificação
-@app.route('/verificacoes/<int:id>', methods=['DELETE'])
-def deletar_verificacao(id):
-    v = Verificacao.query.get(id)
-    if not v:
-        return jsonify({'erro': 'Verificação não encontrada'}), 404
-    db.session.delete(v)
-    db.session.commit()
-    return jsonify({'mensagem': 'Verificação deletada'}), 200
-
+# Outros endpoints protegidos devem usar @token_required similarmente
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -6,7 +6,7 @@ const rl = readline.createInterface({
   output: process.stdout
 });
 
-let usuarioLogado = null;
+let token = null;
 
 function perguntar(pergunta) {
   return new Promise(resolve => rl.question(pergunta, resolve));
@@ -16,7 +16,6 @@ async function menuPrincipal() {
   console.log('\n--- MENU PRINCIPAL ---');
   console.log('1 - Login');
   console.log('2 - Cadastrar');
-  console.log('3 - Deletar usuário');
   console.log('0 - Sair');
 
   const opcao = await perguntar('Escolha uma opção: ');
@@ -28,9 +27,6 @@ async function menuPrincipal() {
     case '2':
       await cadastrarUsuario();
       break;
-    case '3':
-      await deletarUsuario();
-      break;
     case '0':
       console.log('Saindo...');
       rl.close();
@@ -39,11 +35,15 @@ async function menuPrincipal() {
       console.log('Opção inválida!');
   }
 
-  await menuPrincipal();
+  if (token) {
+    await menuLogado();
+  } else {
+    await menuPrincipal();
+  }
 }
 
 async function menuLogado() {
-  console.log(`\n--- MENU DO USUÁRIO: ${usuarioLogado} ---`);
+  console.log('\n--- MENU LOGADO ---');
   console.log('1 - Verificar Plágio');
   console.log('2 - Logout');
 
@@ -54,8 +54,8 @@ async function menuLogado() {
       await verificarPlagio();
       break;
     case '2':
-      usuarioLogado = null;
-      console.log('Logout realizado com sucesso.');
+      token = null;
+      console.log('Logout realizado.');
       return;
     default:
       console.log('Opção inválida!');
@@ -69,28 +69,11 @@ async function fazerLogin() {
   const senha = await perguntar('Senha: ');
 
   try {
-    const resposta = await axios.get('http://localhost:5000/usuarios');
-    const usuario = resposta.data.find(u => u.email === email);
-
-    if (!usuario) {
-      console.error('Usuário não encontrado.');
-      return;
-    }
-
-    // Agora vamos buscar os dados completos do usuário para comparar a senha
-    const usuarioDetalhado = await axios.get(`http://localhost:5000/usuarios/${usuario.id}`);
-
-    if (usuarioDetalhado.data.senha !== senha) {
-      console.error('Senha incorreta.');
-      return;
-    }
-
-    console.log('Login realizado com sucesso!');
-    emailLogado = email;
-    await menuLogado();
-
+    const resposta = await axios.post('http://localhost:5000/login', { email, senha });
+    token = resposta.data.token;
+    console.log(resposta.data.mensagem);
   } catch (erro) {
-    console.error('Erro ao fazer login:', erro.response?.data?.erro || erro.message);
+    console.error('Erro no login:', erro.response?.data?.erro || erro.message);
   }
 }
 
@@ -100,42 +83,26 @@ async function cadastrarUsuario() {
   const senha = await perguntar('Senha: ');
 
   try {
-    const resposta = await axios.post('http://localhost:5000/usuarios', {
-      nome,
-      email,
-      senha
-    });
-
-    console.log(resposta.data.mensagem || 'Usuário cadastrado com sucesso!');
+    const resposta = await axios.post('http://localhost:5000/usuarios', { nome, email, senha });
+    console.log(resposta.data.mensagem || 'Usuário criado com sucesso!');
   } catch (erro) {
     console.error('Erro ao cadastrar:', erro.response?.data?.erro || erro.message);
   }
 }
 
-async function deletarUsuario() {
-  const usuario = await perguntar('Usuário: ');
-  const senha = await perguntar('Senha: '); // Confirmação básica
-
-  try {
-    const resposta = await axios.delete(`http://localhost:5000/usuarios/${usuario}`, {
-      data: { senha } // Envia no corpo da requisição
-    });
-
-    console.log(resposta.data.mensagem || 'Usuário deletado com sucesso!');
-  } catch (erro) {
-    console.error('Erro ao deletar usuário:', erro.response?.data?.erro || erro.message);
-  }
-}
-
 async function verificarPlagio() {
-  const texto1 = await perguntar('Digite o texto produzido: ');
-  const texto2 = await perguntar('Digite o texto para comparação: ');
+  if (!token) {
+    console.log('Você precisa estar logado para verificar plágio.');
+    return;
+  }
+  const texto1 = await perguntar('Texto produzido: ');
+  const texto2 = await perguntar('Texto para comparar: ');
 
   try {
-    const resposta = await axios.post('http://localhost:5000/verificar-plagio', {
-      texto1,
-      texto2
-    });
+    const resposta = await axios.post('http://localhost:5000/verificacoes', 
+      { texto1, texto2 }, 
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
 
     console.log('\n--- Resultado ---');
     console.log(`Similaridade: ${resposta.data.porcentagem_plagio}%`);
